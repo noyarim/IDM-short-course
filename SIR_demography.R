@@ -6,6 +6,7 @@
 
 library(deSolve) #differential equation solver
 library(tidyverse) 
+library(PRIMsrc)
 
 #1. Define model function
 OpenSIR<-function(t, state, parameters) {
@@ -27,7 +28,7 @@ parameters <- c(beta = 0.5, #effective contact rate (aka transmission rate)
                  gamma = 0.3, #recovery rate (1/duration infection)
                  birth = 0.03, #birth rate (per capita)
                  death = 0.03, #all-cause mortality rate
-                 omega = 0.0
+                 omega = 0.0 # waning immunity
 )
 
 state <- c(S = 99999, #population of 100,000, 1 person starts of infected
