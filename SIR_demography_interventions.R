@@ -48,7 +48,7 @@ SIR_V2<-function(t, state, parameters) {
 
 # 1-3. SIR model with vaccination
 # where vaccination provides imperfect protection from infection: change in risk of infection and  in risk of infecting others
-SIR_V2<-function(t, state, parameters) {
+SIR_V3<-function(t, state, parameters) {
   with(as.list(c(state, parameters)),{
     N = S_NotV + S_V + I_NotV + I_V + R_NotV + R_V
     
@@ -75,10 +75,10 @@ SIR_V4<-function(t, state, parameters) {
     N = S + I + Q + R 
     
     #SIR with quarantine
-    dS<- -beta*S*I/N + birth*N - death*S - mu*S
-    dI <- beta*S*I/N - death*I - q*I
-    dQ <- q*I - death*Q - gamma*I
-    dR_NotV <- gamma*I - death*R
+    dS<- -beta*S*I/N + birth*N - death*S
+    dI <- beta*S*I/N - death*I - q*I - gamma*I
+    dQ <- q*I - death*Q - gamma*Q
+    dR <- gamma*I + gamma*Q - death*R
 
     
     # return the rates of change as a list
@@ -89,7 +89,8 @@ SIR_V4<-function(t, state, parameters) {
 #2. Define parameters and starting compartment sizes
 parameters <- c(beta = 0.5, #effective contact rate (aka transmission rate)
                 beta.1 = 0.6, # transmission rate given no-vaccination
-                beta.2 = 0.4, # transmission rate given vaccination
+                mbeta = 0.5, # this should be lower than 1
+                beta.2 = mbeta*beta.1, # transmission rate given vaccination
                 gamma = 0.3, #recovery rate (1/duration infection)
                 birth = 0.03, #birth rate (per capita)
                 death = 0.03, #all-cause mortality rate
@@ -110,6 +111,14 @@ times <- seq(0, T_end, by = 1) #runs the model for 500 time steps (e.g. months),
 output <- ode(y = state, times = times, func = SIR_V1, parms = parameters)
 output <- ode(y = state, times = times, func = SIR_V2, parms = parameters)
 output <- ode(y = state, times = times, func = SIR_V3, parms = parameters)
+output <- ode(y = state, times = times, func = SIR_V4, parms = parameters)
 
+
+
+# Sensitivity analysis on
+# vaccination rate
+# vaccine effectiveness
+# ratio of infectivity between vaccinated and unvaccinated people
+# quarantine rate
 
 

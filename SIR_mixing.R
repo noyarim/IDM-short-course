@@ -19,7 +19,9 @@ library(tidyverse)
 # A vector of time steps corresponding to how long we want to run the model.
 
 parameters <- list(contact_matrix=matrix(data=c(5, 0.5, 0.5, 1)*0.5, #0.5 is original beta
-                                         nrow=2, ncol=2, byrow=T), #WAIFW: beta_hh, beta_lh, beta_hl, beta_ll
+                                         nrow=2, ncol=2, byrow=T), #WAIFW: beta_hh, beta_lh, beta_hl, beta_ll 
+                   # change or remove the label to show that this is contact rate instead of risk of transmission given contact
+                   # be explicity about the definition of high/low risk
                    gamma = 0.3 #recovery rate (1/duration infection)
 )
 

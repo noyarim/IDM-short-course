@@ -52,7 +52,7 @@ output_list <- data.frame()
 
 for (this_sigma in sigma_list){
   
-  parameters$sigma = this_sigma
+  parameters['sigma'] = this_sigma
   this_output <- as.data.frame(ode(y = state, times=times, func=SEIR, parms = parameters))
   this_output$sigma = as.character(this_sigma)
   output_list <- rbind(output_list, this_output)
@@ -61,8 +61,11 @@ for (this_sigma in sigma_list){
 
 # Plot the results with varying rate of waning immunity
 ggplot(output_list)+
-  geom_line(aes(x=time, y=I, color=sigma, group=sigma))+
+  geom_line(aes(x=time, y=I+E, color=sigma, group=sigma))+
   ylab("Infected")+
   xlab("Time")+
   theme_bw()
 
+# With death and birth turn on and off
+# Turn off birth and death and introduce E first to show how it affects the timing of epidemics
+# Then turn on birth and death and introduce E to show how it interacts to produce different prevalence in equibrilium

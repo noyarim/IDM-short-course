@@ -79,7 +79,7 @@ plot_trace(output_long)
 #6. calculate R0
 R0 <- parameters[["beta"]]/parameters[["gamma"]]
 print(R0)
-
+# ADd Rt
 
 #7. Changing beta (effective contact rate) and gamma (recovery rate)
 output_all <- list()

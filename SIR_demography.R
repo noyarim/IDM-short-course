@@ -58,3 +58,4 @@ output_df <- data.frame(output)
 output_df$N <- output_df$S + output_df$I + output_df$R
 print(output_df$I[T_end+1]/output_df$N[T_end+1])
 
+# Sensitivity analysis on birth and death rate
