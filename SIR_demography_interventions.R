@@ -26,18 +26,18 @@ SIR_V1<-function(t, state, parameters) {
 }
 
 # 1-2. SIR model with vaccination
-# where vaccination provides imperfect protection from infection: changing risk of infection
+# where vaccination provides imperfect protection from infection: change in risk of infection and no change in risk of infecting others
 SIR_V2<-function(t, state, parameters) {
   with(as.list(c(state, parameters)),{
     N = S_NotV + S_V + I_NotV + I_V + R_NotV + R_V
     
     #compartments without vaccination
-    dS_NotV <- -beta*S_NotV*I_NotV/N + birth*N - death*S_NotV - mu*S_NotV
-    dI_NotV <- beta*S_NotV*I_NotV/N - death*I_NotV - gamma*I_NotV
+    dS_NotV <- -beta*S_NotV*(I_NotV+I_V)/N + birth*N - death*S_NotV - mu*S_NotV
+    dI_NotV <- beta*S_NotV*(I_NotV+I_V)/N - death*I_NotV - gamma*I_NotV
     dR_NotV <- gamma*I_NotV - death*R_NotV 
     #compartments with vaccination
-    dS_V <- -beta*S_V*I_V/N + birth*N - death*S_V + mu*S_NotV
-    dI_V <- beta*S_V*I_V/N - death*I_V - gamma*I_V
+    dS_V <- -beta*S_V*(I_NotV+I_V)/N*(1-alpha) + birth*N - death*S_V + mu*S_V
+    dI_V <- beta*S_V*(I_NotV+I_V)/N*(1-alpha) - death*I_V - gamma*I_V
     dR_V <- gamma*I_V - death*R_V 
     
     # return the rates of change as a list
@@ -46,9 +46,31 @@ SIR_V2<-function(t, state, parameters) {
   })
 }
 
-# 1-3. SIR model with quarantine
+# 1-3. SIR model with vaccination
+# where vaccination provides imperfect protection from infection: change in risk of infection and  in risk of infecting others
+SIR_V2<-function(t, state, parameters) {
+  with(as.list(c(state, parameters)),{
+    N = S_NotV + S_V + I_NotV + I_V + R_NotV + R_V
+    
+    #compartments without vaccination
+    dS_NotV <- -beta.1*S_NotV*I_NotV/N - beta.2*S_NotV*I_V/N + birth*N - death*S_NotV - mu*S_NotV
+    dI_NotV <- beta.1*S_NotV*I_NotV/N + beta.2*S_NotV*I_V/N - death*I_NotV - gamma*I_NotV
+    dR_NotV <- gamma*I_NotV - death*R_NotV 
+    #compartments with vaccination
+    dS_V <- -beta.1*S_V*I_NotV/N*(1-alpha) - beta.2*S_V*I_V/N*(1-alpha) + birth*N - death*S_V + mu*S_V
+    dI_V <- beta.1*S_V*I_NotV/N*(1-alpha) + beta.2*S_V*I_V/N*(1-alpha) - death*I_V - gamma*I_V
+    dR_V <- gamma*I_V - death*R_V 
+    
+    # return the rates of change as a list
+    list(c(dS_NotV, dI_NotV, dR_NotV,
+           dS_V, dI_V, dR_V))
+  })
+}
+
+
+# 1-4. SIR model with quarantine
 # where a proportion of the infected is under quarantine: I -> Q
-SIR_V3<-function(t, state, parameters) {
+SIR_V4<-function(t, state, parameters) {
   with(as.list(c(state, parameters)),{
     N = S + I + Q + R 
     
@@ -66,6 +88,8 @@ SIR_V3<-function(t, state, parameters) {
 
 #2. Define parameters and starting compartment sizes
 parameters <- c(beta = 0.5, #effective contact rate (aka transmission rate)
+                beta.1 = 0.6, # transmission rate given no-vaccination
+                beta.2 = 0.4, # transmission rate given vaccination
                 gamma = 0.3, #recovery rate (1/duration infection)
                 birth = 0.03, #birth rate (per capita)
                 death = 0.03, #all-cause mortality rate
