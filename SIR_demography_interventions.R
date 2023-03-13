@@ -8,8 +8,9 @@ library(ggplot2)
 
 ## SIER model with vaccination ##
 
-#1. Define model function
-#1-1. SIR model with vaccination (if vaccination provides perfect protection from infection)
+# 1. Define model function
+# 1-1. SIR model with vaccination 
+# where vaccination provides perfect protection from infection: S -> R
 SIR_V1<-function(t, state, parameters) {
   with(as.list(c(state, parameters)),{
     N = S + I + R
@@ -24,13 +25,14 @@ SIR_V1<-function(t, state, parameters) {
   })
 }
 
-#1-2. SIR model with vaccination ( if vaccination provides imperfect protection from infection)
+# 1-2. SIR model with vaccination
+# where vaccination provides imperfect protection from infection: changing risk of infection
 SIR_V2<-function(t, state, parameters) {
   with(as.list(c(state, parameters)),{
     N = S_NotV + S_V + I_NotV + I_V + R_NotV + R_V
     
     #compartments without vaccination
-    dS_NotV <- -beta*S_NotV*I_NotV/N + birth*NotN - death*S_NotV - mu*S_NotV
+    dS_NotV <- -beta*S_NotV*I_NotV/N + birth*N - death*S_NotV - mu*S_NotV
     dI_NotV <- beta*S_NotV*I_NotV/N - death*I_NotV - gamma*I_NotV
     dR_NotV <- gamma*I_NotV - death*R_NotV 
     #compartments with vaccination
@@ -39,7 +41,26 @@ SIR_V2<-function(t, state, parameters) {
     dR_V <- gamma*I_V - death*R_V 
     
     # return the rates of change as a list
-    list(c(dS, dI, dR))
+    list(c(dS_NotV, dI_NotV, dR_NotV,
+           dS_V, dI_V, dR_V))
+  })
+}
+
+# 1-3. SIR model with quarantine
+# where a proportion of the infected is under quarantine: I -> Q
+SIR_V3<-function(t, state, parameters) {
+  with(as.list(c(state, parameters)),{
+    N = S + I + Q + R 
+    
+    #SIR with quarantine
+    dS<- -beta*S*I/N + birth*N - death*S - mu*S
+    dI <- beta*S*I/N - death*I - q*I
+    dQ <- q*I - death*Q - gamma*I
+    dR_NotV <- gamma*I - death*R
+
+    
+    # return the rates of change as a list
+    list(c(dS, dI, dQ, dR))
   })
 }
 
@@ -62,7 +83,9 @@ T_end <- 500 #run model for 500 time steps (e.g. months)
 times <- seq(0, T_end, by = 1) #runs the model for 500 time steps (e.g. months), and computes output at each time step 
 
 #Run the base-case
-output <- ode(y = state, times = times, func = SEIR, parms = parameters)
+output <- ode(y = state, times = times, func = SIR_V1, parms = parameters)
+output <- ode(y = state, times = times, func = SIR_V2, parms = parameters)
+output <- ode(y = state, times = times, func = SIR_V3, parms = parameters)
 
 
 
