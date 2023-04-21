@@ -64,9 +64,6 @@ print(output$I[T_end+1]/output$N[T_end+1])
 print(c("S_star"=S_star, "I_star"=I_star, "R_star"=R_star)) #prevalences at equilibrium
 #see how this matches the equilibrium distribution
 
-<<<<<<< Updated upstream
-# Sensitivity analysis on birth and death rate
-=======
 #5. Calculate Rt
 output <- output %>% mutate(Rt=R0*S/N)
 
@@ -100,4 +97,3 @@ plot_trace(output_all) + facet_wrap(~demo_lab+R0_lab+I_star_lab)
 # takes more time to reach a steady state (when Rt=1)
 # higher R0 (less likely for someone to die before infecting someone else)
 # lower % infected at steady state (slower replenishment of susceptibles)
->>>>>>> Stashed changes
