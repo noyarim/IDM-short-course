@@ -176,6 +176,8 @@ plot_trace_risk(output_all %>% filter(time<=100)) + facet_wrap(~contact_pattern)
 output_all_sum <- output_all %>% group_by(time, state, contact_pattern) %>% 
   summarise(size=sum(size), N=sum(N))
 plot_trace(output_all_sum %>% filter(time<100)) + facet_wrap(~contact_pattern)
+
+#check that homogeneous mixing version is same as basic model without risk stratification
 plot_trace(output_all_sum %>% filter(time<200 & contact_pattern=="Homogeneous mixing"))
 plot_trace(output_long_basic %>% filter(time<200))
 
