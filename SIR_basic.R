@@ -19,7 +19,7 @@ library(tidyverse)
 # A vector of time steps corresponding to how long we want to run the model.
 
 parameters <- c(beta = 0.5, #effective contact rate (aka transmission rate)
-                gamma = 0.3 #recovery rate (1/duration infection)
+                gamma = 0.3 #recovery rate (1/duration of infection)
 )
 
 state <- c(S = 99999, #population of 100,000, 1 person starts of infected
@@ -34,7 +34,7 @@ times <- seq(0, T_end, by = 1) #runs the model for 500 time steps (e.g. months),
 # This will be used with the deSolve package to simulate how your population moves between compartments over time
 
 BasicSIR<-function(t, state, parameters) {
-  with(as.list(c(state, parameters)),{ #this tells R that "S" refers to the "S" in the "state" vector, "beta" refers to the "beta" in "parameters", etc.
+  with(as.list(c(state, parameters)),{ 
     
     N = S + I + R #define N (total population size)
     
@@ -64,11 +64,12 @@ print(head(output)) #I's are rapidly increasing
 print(tail(output)) #steady state - state sizes aren't changing
 
 # We define a function that will plot the epidemic curve of our model output from step #4. 
-output_long <- pivot_longer(as.data.frame(output), cols=2:ncol(output), names_to="state", values_to="size")
+output <- as.data.frame(output) %>% mutate(N=S+I+R)
+output_long <- pivot_longer(output, cols=c("S","I","R"), names_to="state", values_to="size")
 
 plot_trace <-function(out) {
-  fig <- ggplot(out, aes(x=time, y=size, color=state)) + 
-    geom_line(size=1.25) +
+  fig <- ggplot(out, aes(x=time, y=size/N, color=state)) + 
+    geom_line(linewidth=1.25) +
     labs(x='Time', y='Compartment size', color='') +
     theme_bw() + theme(panel.grid=element_blank())
   return(fig)
@@ -76,19 +77,30 @@ plot_trace <-function(out) {
 
 plot_trace(output_long)
 
-#6. calculate R0
+#6. calculate basic reproductive number R0 (doesn't vary over time)
 R0 <- parameters[["beta"]]/parameters[["gamma"]]
 print(R0)
 # ADd Rt
 
-#7. Changing beta (effective contact rate) and gamma (recovery rate)
+#7. calculate effective reproductive number Rt (declines over time as % population susceptible declines)
+output <- output %>% mutate(Rt=R0*S/N)
+
+#see how infections start to decline when Rt<1
+ggplot(output, aes(x=Rt, y=I/N)) + geom_line() +
+  geom_vline(xintercept=1, linetype="dashed", color="red") +
+  labs(x="Effective reproductive number", y="% Infected") +
+  theme_bw() + theme(panel.grid=element_blank())
+
+
+#8. Changing beta (effective contact rate) and gamma (recovery rate)
 output_all <- list()
 for(betas in c(0.2, 0.5, 1)) {
   for(gammas in c(0.1, 0.3, 0.5)) {
     parameters <- c("beta"=betas, 
                     "gamma"=gammas)
     output <- ode(y = state, times = times, func = BasicSIR, parms = parameters)
-    output_long <- pivot_longer(as.data.frame(output), cols=2:ncol(output), names_to="state", values_to="size")
+    output_long <- pivot_longer(as.data.frame(output) %>% mutate(N=S+I+R), 
+                                cols=c("S","I","R"), names_to="state", values_to="size")
     output_all <- c(output_all, list(output_long %>% mutate(beta=paste0("Beta: ", betas), 
                                                             gamma=paste0("Gamma: ", gammas),
                                                             R0=paste0("R0: ", round(betas/gammas, 2)))))
