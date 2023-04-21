@@ -49,8 +49,8 @@ MixingSIR<-function(t, state, parameters) {
     rownames(state) <- c("h", "l")
     
     with(parameters, {
-      dS <- -1*state[, "S"]*state[,"I"]%*%contact_matrix/rowSums(state) #proportion of high and low risk groups that are infectious
-      dI <- state[, "S"]*state[,"I"]%*%contact_matrix/rowSums(state) -
+      dS <- -1*state[, "S"]*state[,"I"]%*%contact_matrix/sum(state) 
+      dI <- state[, "S"]*state[,"I"]%*%contact_matrix/sum(state) -
         gamma*state[,"I"]
       dR <- gamma*state[,"I"]
       
