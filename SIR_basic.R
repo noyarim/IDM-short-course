@@ -80,17 +80,23 @@ plot_trace(output_long)
 #6. calculate basic reproductive number R0 (doesn't vary over time)
 R0 <- parameters[["beta"]]/parameters[["gamma"]]
 print(R0)
-# ADd Rt
 
 #7. calculate effective reproductive number Rt (declines over time as % population susceptible declines)
 output <- output %>% mutate(Rt=R0*S/N)
 
 #see how infections start to decline when Rt<1
-ggplot(output, aes(x=Rt, y=I/N)) + geom_line() +
-  geom_vline(xintercept=1, linetype="dashed", color="red") +
-  labs(x="Effective reproductive number", y="% Infected") +
+library(cowplot)
+fig1 <- ggplot(output) + 
+  geom_line(aes(x=time, y=I/N)) + 
+  labs(x="Time", y="") +
   theme_bw() + theme(panel.grid=element_blank())
-
+fig2 <- ggplot(output) + 
+  geom_line(aes(x=time, y=Rt)) +
+  geom_hline(yintercept=1, linetype="dashed", color="red") +
+  labs(x="Time", y="") +
+  theme_bw() + theme(panel.grid=element_blank())
+fig <- plot_grid(fig1, fig2, nrow=2)
+fig
 
 #8. Changing beta (effective contact rate) and gamma (recovery rate)
 output_all <- list()

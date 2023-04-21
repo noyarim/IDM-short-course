@@ -67,7 +67,7 @@ print(c("S_star"=S_star, "I_star"=I_star, "R_star"=R_star)) #prevalences at equi
 #5. Calculate Rt
 output <- output %>% mutate(Rt=R0*S/N)
 
-#changes in Rt explain the oscillatory pattern in the trace graph
+#changes in Rt corerlate w/ the oscillatory pattern in the trace graph
 #changes in Rt are fueled by rises and falls in the susceptible population (from births and new infections, respectively)
 plot_trace(output_long) +
   geom_line(data=output, aes(x=time, y=Rt), color="black") +

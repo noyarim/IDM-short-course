@@ -64,14 +64,6 @@ MixingSIR<-function(t, state, parameters) {
 output <- ode(y = state, times = times, func = MixingSIR, parms = parameters)
 output <- as.data.frame(output) 
 
-#Note: ode() is a function in the deSolve package. 
-# You must fill it in using the syntax: 
-#    "ode(y= [vector of initial compartment sizes], 
-#         times = [vector of time steps], 
-#         func = [name of SIR model function], 
-#         parms = [vector or list of parameter values])"  
-
-
 #5. View and analyze model output
 output_long <- pivot_longer(output, cols=2:ncol(output), names_to=c("state", "risk"), names_sep="_", values_to="size")
 output_long <- output_long %>% group_by(time, risk) %>% mutate(N=sum(size))
@@ -86,7 +78,7 @@ plot_trace_risk <-function(out) {
 
 plot_trace_risk(output_long %>% filter(time<100))
 
-#in this example, all the high-risk group get infected but many of the low-risk group do not
+#in this example, almost all the high-risk group get infected but many of the low-risk group do not
 
 #6. Compare total infections to a version without risk stratification
 
@@ -144,6 +136,17 @@ R0 <- max(eigen(R_matrix)$values) #this is the R0 of the stratified version
 R0_basic <- parameters_basic[["beta"]]/parameters_basic[["gamma"]]
 print(paste0("R0 basic: ", round(R0_basic, 2), "; RO stratified: ", round(R0, 2)))
 
+#with Rt
+if(FALSE) {
+  output_basic <- output_basic %>% mutate(Rt=R0_basic*S/N)
+  output_long_sum <- output_long_sum %>% mutate(Rt=R0*size[state=="S"]/N)
+  
+  ggplot() +
+    geom_line(data=output_long_sum %>% filter(time<100), aes(x=time, y=Rt, color="Stratified")) +
+    geom_line(data=output_basic %>% filter(time<100), aes(x=time, y=Rt, color="Basic")) +
+    labs(x="Time", y="R_t", color="Model version") + theme_bw()
+}
+
 
 #8. Changing mixing patterns - but keeping total # contacts the same
 contact_matrices <- list(matrix(data=c(35, 0, 0, 5)*0.1,
@@ -155,7 +158,9 @@ contact_matrices <- list(matrix(data=c(35, 0, 0, 5)*0.1,
                       matrix(data=c(5,5,5,5)*0.1,
                              nrow=2, ncol=2, byrow=T)
                       )
-names(contact_matrices) <- c("No mixing", "More assortative mixing", "Less assortative mixing", "Homogeneous mixing")
+
+names(contact_matrices) <- c("No mixing", "More assortative mixing", 
+                             "Less assortative mixing", "Homogeneous mixing")
 
 output_all <- list()
 for(i in names(contact_matrices)) {
