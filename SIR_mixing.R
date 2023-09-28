@@ -39,7 +39,7 @@ state <- c(S_High = 24999, #high (h) and low (l) risk groups
 T_end <- 500 #run model for 500 time steps (e.g. months)
 times <- seq(0, T_end, by = 1) #runs the model for 500 time steps (e.g. months), and computes output at each time step 
 
-#3. Define function for a basic SIR model without demography
+#3. Define function for a basic SIR model with 2 groups and no demography
 # This will be used with the deSolve package to simulate how your population moves between compartments over time
 
 MixingSIR<-function(t, state, parameters) {

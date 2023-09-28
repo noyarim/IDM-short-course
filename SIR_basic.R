@@ -7,7 +7,7 @@
 #1. Load packages
 #if you are installing packages for the first time (only run once):
 #install.packages("deSolve")
-#install.packages("ggplot2")
+#install.packages("tidyverse")
 
 #if you've already installed the packages:
 library(deSolve) #differential equation solver
@@ -18,14 +18,14 @@ library(tidyverse)
 # A vector of initial compartment sizes (often 1 infected person and the rest susceptible)
 # A vector of time steps corresponding to how long we want to run the model.
 
-parameters <- c(beta = 0.5, #effective contact rate (aka transmission rate)
+parameters <- c(beta = 0.5, #effective contact rate
                 gamma = 0.3 #recovery rate (1/duration of infection)
 )
 
 state <- c(S = 99999, #population of 100,000, 1 person starts of infected
            I = 1, 
            R = 0
-)
+) #these could also be proportions (0.99 and 0.01, for instance)
 
 T_end <- 500 #run model for 500 time steps (e.g. months)
 times <- seq(0, T_end, by = 1) #runs the model for 500 time steps (e.g. months), and computes output at each time step 
@@ -35,15 +35,14 @@ times <- seq(0, T_end, by = 1) #runs the model for 500 time steps (e.g. months),
 
 BasicSIR<-function(t, state, parameters) {
   with(as.list(c(state, parameters)),{ 
-    
     N = S + I + R #define N (total population size)
     
-    #SIR model equations from lecture - rates of change in and out of each compartment 
+    #SIR model equations from slides - rates of change in and out of each compartment 
     dS <- -beta*S*I/N
     dI <- beta*S*I/N - gamma*I
     dR <- gamma*I
     
-    #return the rates of change as a list
+    #return the rates of change as a list - must be same order as "state"
     list(c(dS, dI, dR)) 
   })
 }

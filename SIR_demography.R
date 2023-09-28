@@ -20,10 +20,10 @@ OpenSIR<-function(t, state, parameters) {
   with(as.list(c(state, parameters)),{
     N = S + I + R
     
-    #SIR w/ demography equations from lecture
-    dS <- -beta*S*I/N + birth*N - death*S + omega*R
+    #SIR w/ demography equations from the slides
+    dS <- -beta*S*I/N + birth*N - death*S
     dI <- beta*S*I/N - death*I - gamma*I
-    dR <- gamma*I - death*R - omega*R
+    dR <- gamma*I - death*R
     
     # return the rates of change as a list
     list(c(dS, dI, dR))
@@ -31,11 +31,10 @@ OpenSIR<-function(t, state, parameters) {
 }
 
 #2. Define parameters and starting compartment sizes
-parameters <- c(beta = 0.5, #effective contact rate (aka transmission rate)
+parameters <- c(beta = 0.5, #effective contact rate
                  gamma = 0.3, #recovery rate (1/duration infection)
-                 birth = 0.03, #birth rate (per capita)
-                 death = 0.03, #all-cause mortality rate
-                 omega = 0.0 # waning immunity
+                 birth = 0.02, #birth rate (per capita)
+                 death = 0.02 #all-cause mortality rate
 )
 
 state <- c(S = 99999, #population of 100,000, 1 person starts of infected
