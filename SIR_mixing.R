@@ -78,9 +78,7 @@ plot_trace_risk <-function(out) {
 
 plot_trace_risk(output_long %>% filter(time<100))
 
-#in this example, almost all the high-risk group get infected but many of the low-risk group do not
-
-#6. Compare total infections to a version without risk stratification
+#6. Compare to a version without risk stratification
 
 #rerun model from SIR_basic (at the beginning of the code demos)
 parameters_basic <- c(beta = 0.5, #effective contact rate (aka transmission rate)
@@ -118,17 +116,19 @@ plot_trace <-function(out) {
 output_basic <- ode(y = state_basic, times = times, func = BasicSIR, parms = parameters_basic)
 output_basic <- as.data.frame(output_basic) %>% mutate(N=S+I+R)
 output_long_basic <- pivot_longer(output_basic, cols=c("S","I","R"), names_to="state", values_to="size")
-plot_trace(output_long_basic %>% filter(time<100))
+fig1 <- plot_trace(output_long_basic %>% filter(time<100))
 
 #sum across risk groups
 output_long_sum <- output_long %>% group_by(time, state) %>% 
   summarise(size=sum(size), N=sum(N))
-plot_trace(output_long_sum %>% filter(time<100))
+fig2 <- plot_trace(output_long_sum %>% filter(time<100))
 
-# compare these 2 figures
-# without stratified risk groups, epidemic moves more slowly (lower R0) and cumulatively lower % are infected 
+#7. Compare dynamics over time
+plot_grid(fig1 + ggtitle("Homogeneous Mixing"), 
+          fig2 + ggtitle("Heterogeneous Mixing"),
+          align="hv")
 
-#7. Let's test this out by calculating R0 and Rt
+#8.Compare R0 and Rt
 R_matrix <- parameters$contact_matrix*(rowSums(matrix(data=state, nrow=ncol(parameters$contact_matrix)))/sum(state))/
   (parameters$gamma)
 R0 <- max(eigen(R_matrix)$values) #this is the R0 of the stratified version
@@ -137,18 +137,16 @@ R0_basic <- parameters_basic[["beta"]]/parameters_basic[["gamma"]]
 print(paste0("R0 basic: ", round(R0_basic, 2), "; RO stratified: ", round(R0, 2)))
 
 #with Rt
-if(FALSE) {
-  output_basic <- output_basic %>% mutate(Rt=R0_basic*S/N)
-  output_long_sum <- output_long_sum %>% mutate(Rt=R0*size[state=="S"]/N)
-  
-  ggplot() +
-    geom_line(data=output_long_sum %>% filter(time<100), aes(x=time, y=Rt, color="Stratified")) +
-    geom_line(data=output_basic %>% filter(time<100), aes(x=time, y=Rt, color="Basic")) +
-    labs(x="Time", y="R_t", color="Model version") + theme_bw()
-}
+output_basic <- output_basic %>% mutate(Rt=R0_basic*S/N)
+output_long_sum <- output_long_sum %>% mutate(Rt=R0*size[state=="S"]/N)
+
+ggplot() +
+  geom_line(data=output_long_sum %>% filter(time<100), aes(x=time, y=Rt, color="Stratified")) +
+  geom_line(data=output_basic %>% filter(time<100), aes(x=time, y=Rt, color="Basic")) +
+  labs(x="Time", y="R_t", color="Model version") + theme_bw()
 
 
-#8. Changing mixing patterns - but keeping total # contacts the same
+#9. Changing mixing patterns - but keeping total # contacts the same
 contact_matrices <- list(matrix(data=c(35, 0, 0, 5)*0.1,
                              nrow=2, ncol=2, byrow=T),
                       matrix(data=c(29, 1, 1, 5)*0.1, 
@@ -172,17 +170,17 @@ for(i in names(contact_matrices)) {
     output_all <- c(output_all, list(output_long %>% mutate(contact_pattern=i)))
 }
 
+#results stratified by risk group
 output_all <- bind_rows(output_all) %>%
   mutate(contact_pattern=factor(contact_pattern, levels=names(contact_matrices)))
-
 plot_trace_risk(output_all %>% filter(time<=100)) + facet_wrap(~contact_pattern)
-#more homogeneous mixing -> more of the low-risk group gets infected, slower dynamics
 
+#total population results
 output_all_sum <- output_all %>% group_by(time, state, contact_pattern) %>% 
   summarise(size=sum(size), N=sum(N))
 plot_trace(output_all_sum %>% filter(time<100)) + facet_wrap(~contact_pattern)
 
-#check that homogeneous mixing version is same as basic model without risk stratification
+#10. Confirm that homogeneous mixing version is same as basic model without risk stratification
 plot_trace(output_all_sum %>% filter(time<200 & contact_pattern=="Homogeneous mixing"))
 plot_trace(output_long_basic %>% filter(time<200))
 

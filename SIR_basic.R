@@ -18,7 +18,7 @@ library(tidyverse)
 # A vector of initial compartment sizes (often 1 infected person and the rest susceptible)
 # A vector of time steps corresponding to how long we want to run the model.
 
-parameters <- c(beta = 0.5, #effective contact rate
+parameters <- list(beta = 0.5, #effective contact rate
                 gamma = 0.3 #recovery rate (1/duration of infection)
 )
 
@@ -59,8 +59,8 @@ output <- ode(y = state, times = times, func = BasicSIR, parms = parameters)
 
 
 #5. View and analyze model output
-print(head(output)) #I's are rapidly increasing
-print(tail(output)) #steady state - state sizes aren't changing
+print(head(output, 10)) #I's are rapidly increasing
+print(tail(output, 10)) #steady state - state sizes aren't changing
 
 # We define a function that will plot the epidemic curve of our model output from step #4. 
 output <- as.data.frame(output) %>% mutate(N=S+I+R)
@@ -74,7 +74,7 @@ plot_trace <-function(out) {
   return(fig)
 }
 
-plot_trace(output_long)
+plot_trace(output_long %>% filter(time <= 200))
 
 #6. calculate basic reproductive number R0 (doesn't vary over time)
 R0 <- parameters[["beta"]]/parameters[["gamma"]]
@@ -85,14 +85,14 @@ output <- output %>% mutate(Rt=R0*S/N)
 
 #see how infections start to decline when Rt<1
 library(cowplot)
-fig1 <- ggplot(output) + 
+fig1 <- ggplot(output %>% filter(time<=200)) + 
   geom_line(aes(x=time, y=I/N)) + 
-  labs(x="Time", y="") +
+  labs(x="Time", y="% infected") +
   theme_bw() + theme(panel.grid=element_blank())
-fig2 <- ggplot(output) + 
+fig2 <- ggplot(output %>% filter(time<=200)) + 
   geom_line(aes(x=time, y=Rt)) +
   geom_hline(yintercept=1, linetype="dashed", color="red") +
-  labs(x="Time", y="") +
+  labs(x="Time", y="R(t)") +
   theme_bw() + theme(panel.grid=element_blank())
 fig <- plot_grid(fig1, fig2, nrow=2)
 fig
