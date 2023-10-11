@@ -9,7 +9,7 @@ library(ggplot2)
 ## SIRS model (a model with waning immunity) ##
 
 #1. Define model function
-SIRS<-function(t, state, parameters) {
+OpenSIRS<-function(t, state, parameters) {
   with(as.list(c(state, parameters)),{
     N = S + I + R
     
@@ -41,25 +41,50 @@ T_end <- 500 #run model for 500 time steps (e.g. months)
 times <- seq(0, T_end, by = 1) #runs the model for 500 time steps (e.g. months), and computes output at each time step 
 
 #Run the base-case
-output <- ode(y = state, times = times, func = SIRS, parms = parameters)
+output <- ode(y = state, times = times, func = OpenSIRS, parms = parameters)
 
-#Run the sensitivity analysis on the rate of waning immunity
-omega_list <- seq(0,0.5,by=0.1)
-output_list <- data.frame()
+#Plot the result from base-case
+plot(output)
+
+#Run one-way sensitivity analysis on the rate of waning immunity
+omega_list <- seq(0,0.3,by=0.1)
+osa_list <- data.frame()
 
 for (this_omega in omega_list){
   
   parameters$omega = this_omega
-  this_output <- as.data.frame(ode(y = state, times=times, func=SIRS, parms = parameters))
+  this_output <- as.data.frame(ode(y = state, times=times, func=OpenSIRS, parms = parameters))
   this_output$omega = as.character(this_omega)
-  output_list <- rbind(output_list, this_output)
+  osa_list <- rbind(osa_list, this_output)
   
 }
 
 # Plot the results with varying rate of waning immunity
-ggplot(output_list)+
+ggplot(osa_list)+
     geom_line(aes(x=time, y=I, color=omega, group=omega))+
     ylab("Infected")+
     xlab("Time")+
     theme_bw()
 
+#Run two-way sensitivity analysis on omega & beta
+beta_list <- seq(0.4,0.6,by=0.1)
+twsa_list <- data.frame()
+
+for (this_beta in beta_list){
+  parameters$beta = this_beta
+  for (this_omega in omega_list){
+    
+    parameters$omega = this_omega
+    this_output <- as.data.frame(ode(y = state, times=times, func=OpenSIRS, parms = parameters))
+    this_output$omega = as.character(this_omega)
+    this_output$beta = as.character(this_beta)
+    twsa_list <- rbind(twsa_list, this_output)
+  }
+}
+# Plot the results with varying gamma and beta
+ggplot(twsa_list)+
+  geom_line(aes(x=time, y=I))+
+  facet_grid(beta~omega)+
+  ylab("Infected")+
+  xlab("Time")+
+  theme_bw()
