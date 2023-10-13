@@ -47,42 +47,59 @@ output <- ode(y = state, times = times, func = OpenSIRS, parms = parameters)
 plot(output)
 
 #Run one-way sensitivity analysis on the rate of waning immunity
-omega_list <- seq(0,0.3,by=0.1)
-osa_list <- data.frame()
+omega_list <- seq(0,0.3,by=0.1) # list of omegas
+osa_dt <- data.frame() # empty data to save outputs
 
 for (this_omega in omega_list){
-  
-  parameters$omega = this_omega
+  # Update omega
+  parameters['omega']= this_omega
+  # Solve ODE
   this_output <- as.data.frame(ode(y = state, times=times, func=OpenSIRS, parms = parameters))
+  # Save omega value in the outcome table
   this_output$omega = as.character(this_omega)
-  osa_list <- rbind(osa_list, this_output)
+  # Stack the ode result
+  osa_dt <- rbind(osa_dt, this_output)
   
 }
 
 # Plot the results with varying rate of waning immunity
-ggplot(osa_list)+
+ggplot(osa_dt)+
     geom_line(aes(x=time, y=I, color=omega, group=omega))+
     ylab("Infected")+
     xlab("Time")+
     theme_bw()
 
 #Run two-way sensitivity analysis on omega & beta
-beta_list <- seq(0.4,0.6,by=0.1)
-twsa_list <- data.frame()
+omega_list <- seq(0,0.3,by=0.1) # list of omegas
+beta_list <- seq(0.4,0.6,by=0.1) # list of beta values
+twsa_dt <- data.frame() # data to save the ode outcomes
 
 for (this_beta in beta_list){
-  parameters$beta = this_beta
+  # Update beta
+  parameters['beta'] = this_beta
   for (this_omega in omega_list){
-    
-    parameters$omega = this_omega
+    # update omega
+    parameters['omega'] = this_omega
+    # Run ode solver
     this_output <- as.data.frame(ode(y = state, times=times, func=OpenSIRS, parms = parameters))
+    # Save omega
     this_output$omega = as.character(this_omega)
+    # Save beta
     this_output$beta = as.character(this_beta)
-    twsa_list <- rbind(twsa_list, this_output)
+    # Stack the ode result
+    twsa_dt <- rbind(twsa_dt, this_output)
   }
 }
-# Plot the results with varying gamma and beta
-ggplot(twsa_list)+
+# Plot the results with varying omega and beta
+# Change the label for omega and beta
+omega_lb <- sapply(omega_list,function(x) paste0("omega=",x))
+twsa_dt$omega <- factor(twsa_dt$omega, labels = omega_lb)
+beta_lb <- sapply(beta_list,function(x) paste0("beta=",x))
+twsa_dt$beta <- factor(twsa_dt$beta, labels = beta_lb)
+# Check if label is created correctly
+head(twsa_dt)
+# Plot the two-way sensitivity analysis result
+ggplot(twsa_dt)+
   geom_line(aes(x=time, y=I))+
   facet_grid(beta~omega)+
   ylab("Infected")+

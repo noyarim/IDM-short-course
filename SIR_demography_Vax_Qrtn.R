@@ -7,12 +7,12 @@ library(deSolve)
 library(ggplot2)
 library(reshape2)
 library(dplyr)
+library(ggpubr)
 
 ## SIR model with vaccination ##
 
+## A. Vaccination provides perfect protection from infection: S -> R ##
 # 1. Define model function
-# 1-1. SIR model with vaccination 
-# where vaccination provides perfect protection from infection: S -> R
 OpenSIR_Vax_pp<-function(t, state, parameters) {
   with(as.list(c(state, parameters)),{
     N = S + I + R
@@ -28,8 +28,48 @@ OpenSIR_Vax_pp<-function(t, state, parameters) {
   })
 }
 
-# 1-2. SIR model with vaccination
-# where vaccination provides imperfect protection from infection: change in risk of infection and no change in risk of infecting others
+# 2. Define parameters and starting compartment sizes
+parameters <- c(beta = 0.5, #effective contact rate (aka transmission rate)
+                beta.1 = 0.5, # transmission rate given no-vaccination
+                mbeta = 0.5, # this should be lower than 1
+                gamma = 0.3, #recovery rate (1/duration infection)
+                birth = 0.03, #birth rate (per capita)
+                death = 0.03, #all-cause mortality rate
+                omega = 0, # waning immunity
+                mu = 0.01, # vaccination rate
+                alpha = 0.3, # vaccine effectiveness
+                q = 0.02 # quarantine rate
+)
+
+# Initial state distribution
+state.pp <- c(S = 99999, #population of 100,000, 1 person starts of infected
+              I = 1, 
+              R = 0,
+              C = 0)
+
+T_end <- 500 #run model for 500 time steps (e.g. months)
+times <- seq(0, T_end, by = 1) #runs the model for 500 time steps (e.g. months), and computes output at each time step 
+
+# Run the base-case
+output.vax.pp <- ode(y = state.pp, times = times, func = OpenSIR_Vax_pp, parms = parameters)
+
+# Plot the basecase result
+plot(output.vax.pp)
+
+# Compare I when mu = 0 (no vax) and mu = 0.01 (vax)
+temp_param <- parameters
+temp_param['mu'] = 0
+temp_output <-  ode(y = state.pp, times = times, func = OpenSIR_Vax_pp, parms = temp_param)
+I_dt <- data.frame(time = temp_output[,'time'],no_vax = temp_output[,'I'], vax = output.vax.pp[,'I'])
+ggplot(I_dt)+
+  geom_line(aes(time,vax,color='vax'))+
+  geom_line(aes(time,no_vax,color='No vax'))+
+  theme_bw()+
+  scale_color_manual(values=c("blue","tomato"))
+
+## B. Vaccination provides imperfect protection from infection ##
+# B-1. No change in risk of infecting others
+# 1. Define model function
 OpenSIR_Vax_ip1<-function(t, state, parameters) {
   with(as.list(c(state, parameters)),{
     N = S_NotV + S_V + I_NotV + I_V + R_NotV + R_V
@@ -39,7 +79,7 @@ OpenSIR_Vax_ip1<-function(t, state, parameters) {
     dI_NotV <- beta*S_NotV*(I_NotV+I_V)/N - death*I_NotV - gamma*I_NotV
     dR_NotV <- gamma*I_NotV - death*R_NotV 
     #compartments with vaccination
-    dS_V <- -beta*S_V*(I_NotV+I_V)/N*(1-alpha) + birth*N - death*S_V + mu*S_NotV
+    dS_V <- -beta*S_V*(I_NotV+I_V)/N*(1-alpha) - death*S_V + mu*S_NotV
     dI_V <- beta*S_V*(I_NotV+I_V)/N*(1-alpha) - death*I_V - gamma*I_V
     dR_V <- gamma*I_V - death*R_V 
     
@@ -51,19 +91,19 @@ OpenSIR_Vax_ip1<-function(t, state, parameters) {
   })
 }
 
-# 1-3. SIR model with vaccination
-# where vaccination provides imperfect protection from infection: change in risk of infection and  in risk of infecting others
+# 1. Define model function
+# B-2. Change in risk of infecting others with vaccination
 OpenSIR_Vax_ip2<-function(t, state, parameters) {
   with(as.list(c(state, parameters)),{
     N = S_NotV + S_V + I_NotV + I_V + R_NotV + R_V
     beta.2 = mbeta*beta.1 # transmission rate given vaccination
-    
+    print(c(beta.1,beta.2))
     #compartments without vaccination
     dS_NotV <- -beta.1*S_NotV*I_NotV/N - beta.2*S_NotV*I_V/N + birth*N - death*S_NotV - mu*S_NotV
     dI_NotV <- beta.1*S_NotV*I_NotV/N + beta.2*S_NotV*I_V/N - death*I_NotV - gamma*I_NotV
     dR_NotV <- gamma*I_NotV - death*R_NotV 
     #compartments with vaccination
-    dS_V <- -beta.1*S_V*I_NotV/N*(1-alpha) - beta.2*S_V*I_V/N*(1-alpha) + birth*N - death*S_V + mu*S_V
+    dS_V <- -beta.1*S_V*I_NotV/N*(1-alpha) - beta.2*S_V*I_V/N*(1-alpha) - death*S_V + mu*S_V
     dI_V <- beta.1*S_V*I_NotV/N*(1-alpha) + beta.2*S_V*I_V/N*(1-alpha) - death*I_V - gamma*I_V
     dR_V <- gamma*I_V - death*R_V 
     
@@ -75,7 +115,59 @@ OpenSIR_Vax_ip2<-function(t, state, parameters) {
   })
 }
 
+# 2. Define parameters and starting compartment sizes
+parameters <- c(beta = 0.5, #effective contact rate (aka transmission rate)
+                beta.1 = 0.5, # transmission rate given no-vaccination
+                mbeta = 1, # 1 if no change in infectivity with vaccination, 
+                           # less than 1 if reduced infectivity with vaccination
+                gamma = 0.3, #recovery rate (1/duration infection)
+                birth = 0.03, #birth rate (per capita)
+                death = 0.03, #all-cause mortality rate
+                omega = 0, # waning immunity
+                mu = 0.01, # vaccination rate
+                alpha = 0.3, # vaccine effectiveness
+                q = 0.02 # quarantine rate
+                
+)
 
+# initial state
+state.ip <- c(S_NotV = 99999,
+              S_V = 0,
+              I_NotV = 1,
+              I_V = 0,
+              R_NotV = 0,
+              R_V = 0,
+              C = 0)
+T_end <- 500 #run model for 500 time steps (e.g. months)
+times <- seq(0, T_end, by = 1) #runs the model for 500 time steps (e.g. months), and computes output at each time step 
+
+# Run ODE solver
+output.vax.ip1 <- ode(y = state.ip, times = times, func = OpenSIR_Vax_ip1, parms = parameters)
+output.vax.ip2 <- ode(y = state.ip, times = times, func = OpenSIR_Vax_ip2, parms = parameters)
+# Calculate S, I, and R
+output.vax.ip1 <- as.data.frame(output.vax.ip1) %>%
+  mutate(S = S_V + S_NotV,
+         I = I_V + I_NotV,
+         R = R_V + R_NotV)
+output.vax.ip2 <- as.data.frame(output.vax.ip2) %>%
+  mutate(S = S_V + S_NotV,
+         I = I_V + I_NotV,
+         R = R_V + R_NotV)  
+# Plot base-case outcomes
+g1<- ggplot(output.vax.ip1)+
+        geom_line(aes(time,S,color="S"))+
+        geom_line(aes(time,I,color="I"))+
+        geom_line(aes(time,R,color="R"))+
+        scale_color_manual(values=c("tomato","blue","green"))+
+        theme_bw()
+g2<- ggplot(output.vax.ip2)+
+        geom_line(aes(time,S,color="S"))+
+        geom_line(aes(time,I,color="I"))+
+        geom_line(aes(time,R,color="R"))+
+        scale_color_manual(values=c("tomato","blue","green"))+
+        theme_bw()
+# side-by-side plot
+ggarrange(g1,g2,common.legend = TRUE)
 # 1-4. SIR model with quarantine
 # where a proportion of the infected is under quarantine: I -> Q
 OpenSIR_Qrtn<-function(t, state, parameters) {
@@ -93,36 +185,7 @@ OpenSIR_Qrtn<-function(t, state, parameters) {
     list(c(dS, dI, dQ, dR, dC))
   })
 }
-
-
-#2. Define parameters and starting compartment sizes
-parameters <- c(beta = 0.5, #effective contact rate (aka transmission rate)
-                beta.1 = 0.5, # transmission rate given no-vaccination
-                mbeta = 0.5, # this should be lower than 1
-                gamma = 0.3, #recovery rate (1/duration infection)
-                birth = 0.03, #birth rate (per capita)
-                death = 0.03, #all-cause mortality rate
-                omega = 0, # waning immunity
-                mu = 0.01, # vaccination rate
-                alpha = 0.3, # vaccine effectiveness
-                q = 0.02 # quarantine rate
-            
-)
-
-# Initial state distribution
-state.pp <- c(S = 99999, #population of 100,000, 1 person starts of infected
-           I = 1, 
-           R = 0,
-           C = 0)
-
-state.ip <- c(S_NotV = 99999,
-             S_V = 0,
-             I_NotV = 1,
-             I_V = 0,
-             R_NotV = 0,
-             R_V = 0,
-             C = 0)
-
+# Initial state
 state.q <- c(S = 99999, #population of 100,000, 1 person starts of infected
              I = 1, 
              Q = 0,
@@ -131,12 +194,12 @@ state.q <- c(S = 99999, #population of 100,000, 1 person starts of infected
 
 T_end <- 500 #run model for 500 time steps (e.g. months)
 times <- seq(0, T_end, by = 1) #runs the model for 500 time steps (e.g. months), and computes output at each time step 
-
-#Run the base-case
-output.vax.pp <- ode(y = state.pp, times = times, func = OpenSIR_Vax_pp, parms = parameters)
-output.vax.ip1 <- ode(y = state.ip, times = times, func = OpenSIR_Vax_ip1, parms = parameters)
-output.vax.ip2 <- ode(y = state.ip, times = times, func = OpenSIR_Vax_ip2, parms = parameters)
+# Run ODE solver
 output.qrtn <- ode(y = state.q, times = times, func = OpenSIR_Qrtn, parms = parameters)
+
+# Plot base-case result
+plot(output.vax.pp)  
+plot(output.vax.ip1)
 
 ## Sensitivity Analysis
 # 1. Vaccination rate (on OpenSIR_Vax_ip1)

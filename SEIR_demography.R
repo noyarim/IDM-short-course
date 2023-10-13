@@ -70,73 +70,59 @@ out_seir_demo <- data.frame(ode(y = state, times = times, func = OpenSEIR, parms
 #Plot the result of base-case
 ggplot(data=as.data.frame(out_seir_demo))+
   geom_point(aes(time,I))
-out_seir_demo_t <- melt(out_seir_demo, id.vars="time")
-out_seir_demo_t$demo <- "Births and deaths"
-out_seir_comb <- rbind(out_seir_nodemo_t, out_seir_demo_t)
 
-ggplot(data=out_seir_comb)+
-  geom_line(aes(x=time,y=value, color=variable))+
-  facet_wrap(.~demo)+
-  theme_bw()
-
-#Run the sensitivity analysis on the latent period (SEIR_demo)
-tlat_list <- seq(0,100,by=0.1)
-output_list <- data.frame()
+#One-wy sensitivity analysis on the latent period (SEIR_demo)
+tlat_list <- c(0.01,seq(1,5,by=1)) # a vector of latent period
+output_dt <- data.frame() # empty data to save outcomes
 
 for (this_tlat in tlat_list){
-  
-  parameters['t_lat'] = this_tlat
+  # Replace latent period with the next value in the last
+  parameters['t_lat'] = this_tlat 
+  # Run ode solver
   this_output <- data.frame(ode(y = state, times=times, func=OpenSEIR, parms = parameters))
+  # Record current value of t_lat
   this_output$t_lat = as.character(this_tlat)
-  output_list <- rbind(output_list, this_output)
+  # Stack the result 
+  output_dt <- rbind(output_dt, this_output)
   
 }
 
 # Plot the results with varying latent period
-ggplot(output_list)+
-  geom_line(aes(x=time, y=I+E, color=t_lat, group=t_lat))+
-  ylab("Infected")+
-  xlab("Time")+
-  theme_bw()+
-  theme(legend.position='none')
-
-# Discrete sensitivity analysis on latent period to show change in dynamics
-tlat_list <- c(0.03,3,10)
-output_list <- data.frame()
-for (this_tlat in tlat_list){
-  
-  parameters['t_lat'] = this_tlat
-  this_output <- data.frame(ode(y = state, times=times, func=OpenSEIR, parms = parameters))
-  this_output$t_lat = as.character(this_tlat)
-  output_list <- rbind(output_list, this_output)
-  
-}
-ggplot(output_list)+
+ggplot(output_dt)+
   geom_line(aes(x=time, y=I+E, color=t_lat, group=t_lat))+
   ylab("Infected")+
   xlab("Time")+
   theme_bw()
+  theme(legend.position='none')
 
 # Continuous sensitivity analysis showing the change in the epidemic peak
+# A function to find the epidemic peak given a time frame
 find_peak <- function(output){
   infected <- output$E + output$I
   peak <- which.max(infected)
   return(peak)
 }
 
-tlat_list <- seq(0.03,10,by=0.1)
-output_list <- data.frame()
+tlat_list <- seq(0.03,10,by=0.1) # a vector of t_lat
+output_dt <- data.frame() # An empty dataset to save ode outcomes
 for (this_tlat in tlat_list){
-  
-  parameters['t_lat'] = this_tlat
+  # Replace t_lat with the next value
+  parameters['t_lat'] = this_tlat 
+  # Run ode solver
   this_output <- data.frame(ode(y = state, times=times, func=OpenSEIR, parms = parameters))
+  # Find the epidemic peak
   this_peak <- find_peak(this_output)
+  # Create a dataset with peak and t_lat in this cycle
   this_output <- data.frame(peak=this_peak, tlat=this_tlat)
+  # Stack the dataset 
   output_list <- rbind(output_list, this_output)
   
 }
+# Plot the result
 ggplot(output_list)+
   geom_point(aes(x=tlat, y=peak))+
-  ylab("epi peak")+
-  xlab("tlat")+
+  ylab("Epi peak")+
+  xlab("Latent period")+
   theme_bw()
+
+
