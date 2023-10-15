@@ -71,7 +71,7 @@ out_seir_demo <- data.frame(ode(y = state, times = times, func = OpenSEIR, parms
 ggplot(data=as.data.frame(out_seir_demo))+
   geom_point(aes(time,I))
 
-#One-wy sensitivity analysis on the latent period (SEIR_demo)
+#One-way sensitivity analysis on the latent period (SEIR_demo)
 tlat_list <- c(0.01,seq(1,5,by=1)) # a vector of latent period
 output_dt <- data.frame() # empty data to save outcomes
 
@@ -115,11 +115,11 @@ for (this_tlat in tlat_list){
   # Create a dataset with peak and t_lat in this cycle
   this_output <- data.frame(peak=this_peak, tlat=this_tlat)
   # Stack the dataset 
-  output_list <- rbind(output_list, this_output)
+  output_dt <- rbind(output_dt, this_output)
   
 }
 # Plot the result
-ggplot(output_list)+
+ggplot(output_dt)+
   geom_point(aes(x=tlat, y=peak))+
   ylab("Epi peak")+
   xlab("Latent period")+
