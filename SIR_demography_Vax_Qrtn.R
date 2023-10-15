@@ -103,7 +103,7 @@ OpenSIR_Vax_ip2<-function(t, state, parameters) {
     dI_NotV <- beta.1*S_NotV*I_NotV/N + beta.2*S_NotV*I_V/N - death*I_NotV - gamma*I_NotV
     dR_NotV <- gamma*I_NotV - death*R_NotV 
     #compartments with vaccination
-    dS_V <- -beta.1*S_V*I_NotV/N*(1-alpha) - beta.2*S_V*I_V/N*(1-alpha) - death*S_V + mu*S_V
+    dS_V <- -beta.1*S_V*I_NotV/N*(1-alpha) - beta.2*S_V*I_V/N*(1-alpha) - death*S_V + mu*S_NotV
     dI_V <- beta.1*S_V*I_NotV/N*(1-alpha) + beta.2*S_V*I_V/N*(1-alpha) - death*I_V - gamma*I_V
     dR_V <- gamma*I_V - death*R_V 
     
@@ -118,7 +118,7 @@ OpenSIR_Vax_ip2<-function(t, state, parameters) {
 # 2. Define parameters and starting compartment sizes
 parameters <- c(beta = 0.5, #effective contact rate (aka transmission rate)
                 beta.1 = 0.5, # transmission rate given no-vaccination
-                mbeta = 1, # 1 if no change in infectivity with vaccination, 
+                mbeta = 0.5, # 1 if no change in infectivity with vaccination, 
                            # less than 1 if reduced infectivity with vaccination
                 gamma = 0.3, #recovery rate (1/duration infection)
                 birth = 0.03, #birth rate (per capita)
