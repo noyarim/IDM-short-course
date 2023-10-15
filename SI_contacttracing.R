@@ -6,7 +6,7 @@
 library(deSolve)
 library(ggplot2)
 library(reshape2)
-library(dplyr)
+library(tidyverse)
 
 # 1. Define model function
 SI_CC<-function(t, state, parameters) {
