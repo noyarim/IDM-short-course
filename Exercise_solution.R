@@ -102,7 +102,7 @@ OpenSEIRS_qrtn<-function(t, state, parameters) {
     dE <- beta*S*I/N - sigma*E - death*E
     dI <- sigma*E - death*I - gamma*I - q_t*I
     dQ <- q_t*I - death*Q - gamma*Q
-    dR <- gamma*I - death*R - omega*R
+    dR <- gamma*I - gamma*Q + death*R - omega*R
     
     # return the rates of change as a list
     list(c(dS, dE, dI, dQ, dR))
@@ -116,7 +116,7 @@ parameters <- c(beta = 0.2, #effective contact rate (aka transmission rate)
                 death = 12/1000/365, #all-cause mortality rate
                 omega = 1/(30.5*3),#0.01, # waning immunity
                 t_lat = 5, # latent period from E to I
-                q = 0.01, # quarantine rate after implementing quarantine
+                q = 0.05, # quarantine rate after implementing quarantine
                 t_start_q = 50 # time to implement quarantine
                 
 )
