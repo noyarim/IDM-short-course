@@ -1,0 +1,94 @@
+---
+title: "SI_contacttracing"
+author: "Kyu Lee"
+date: "2023-10-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(deSolve)
+library(ggplot2)
+library(reshape2)
+library(tidyverse)
+```
+
+## Adds vaccination to the basic SIR model
+This code is to illustrate how to model contact tracing in SI model.
+
+First, we defined the ode function with S,I,Tx compartment. Tx compartment indicates infected individuals who are under treatment and contact tracing. 
+```{r}
+# 1. Define model function
+SI_CC<-function(t, state, parameters) {
+  with(as.list(c(state, parameters)),{
+    N = S + I + Tx
+    
+    #SI w/o demography equations from lecture
+    dS <- -beta*S*I/N + rt*Tx
+    dI <- beta*S*I/N - si*I - c*b*Tx
+    dTx <- si*I + c*b*Tx - rt*Tx
+    # Cumulative incidence 
+    dC <- beta*S*I/N
+    # return the rates of change as a list
+    list(c(dS, dI, dTx, dC))
+  })
+}
+```
+
+We then define parameters and starting compartment sizes for ode solver.
+```{r}
+#2. Define parameters and starting compartment sizes
+parameters <- c(beta = 0.5, #effective contact rate (aka transmission rate)
+                rt = 0.1, # 1/duration of treatment and tracing
+                si = 0.1, # rate of seeking treatment
+                c = 0.05, # rate of contact tracing
+                b = 0.05# probability that a traced individual is infected
+)
+# Initial state
+state <- c(S = 99999, #population of 100,000, 1 person starts of infected
+             I = 1, 
+             Tx = 0,
+             C = 0)
+```
+
+We set the total time steps and run the SI model. 
+```{r}
+T_end <- 500 #run model for 500 time steps (e.g. months)
+times <- seq(0, T_end, by = 1) #runs the model for 500 time steps (e.g. months), and computes output at each time step 
+
+#Run the base-case
+output.ct <- ode(y = state, times = times, func = SI_CC, parms = parameters)
+```
+
+Plot S. I, R compartment over time
+```{r, echo=FALSE}
+plot(output.ct)
+```
+
+Run sensitivity analysis on contact tracing rate and discuss how it affects the dynamics.
+```{r}
+# Sensitivity analysis on contact tracing rate
+c_list <- c(0,0.05,0.1) # a vector of contact tracing rate
+output_dt <- data.frame() # empty data to save outcomes
+
+for (this_c in c_list){
+  temp <- parameters
+  # Replace latent period with the next value in the last
+  temp['c'] <- this_c
+  # Run ode solver
+  this_output <- data.frame(ode(y = state, times = times, func = SI_CC, parms = temp))
+  # Record current value of t_lat
+  this_output$c = as.character(this_c)
+  # Stack the result 
+  output_dt <- rbind(output_dt, this_output)
+  
+}
+
+# Plot the results with varying latent period
+ggplot(output_dt)+
+  geom_line(aes(x=time, y=I, color=c, group=c))+
+  ylab("Infected")+
+  xlab("Time")+
+  theme_bw()
+```
+

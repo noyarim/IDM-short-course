@@ -1,0 +1,157 @@
+---
+title: "SEIR_latency"
+author: "Kyu Lee"
+date: "2023-10-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(deSolve)
+library(ggplot2)
+library(reshape2)
+```
+
+## Adds latent state to the basic SIR model
+This code is to illustrate how to model disease latency in SIR model.
+
+First, we defined the ode function with S,E,I,R compartment. E compartment indicates those who were exposed to the infectious agent but have not developed infectivity. In the differential equation, rate of progressing from E to I is internally calculated based on the latent period (sigma = 1/t_lat). Note that E does not infect others (i.e. number of new infections is still beta*S*I/N but not beta*S*(E+I)/N).
+
+```{r}
+#1. Define model function
+OpenSEIR<-function(t, state, parameters) {
+  with(as.list(c(state, parameters)),{
+    N = S + E + I + R
+    sigma = 1/t_lat # 1/latent period
+    
+    #SIR w/ demography equations from lecture
+    dS <- -beta*S*I/N + birth*N - death*S + omega*R
+    dE <- beta*S*I/N - sigma*E - death*E
+    dI <- sigma*E - death*I - gamma*I
+    dR <- gamma*I - death*R - omega*R
+    
+    # return the rates of change as a list
+    list(c(dS, dE, dI, dR))
+  })
+}
+```
+
+We then define parameters and starting compartment sizes for ode solver. t_lat the duration of latency before getting infectious. In this example, we assumed no waning immunity (omega=0) but this assumption can be easily relaxed. 
+```{r}
+#2. Define parameters and starting compartment sizes
+parameters <- c(beta = 0.5, #effective contact rate (aka transmission rate)
+                gamma = 0.3, #recovery rate (1/duration infection)
+                birth = 0.03, #birth rate (per capita)
+                death = 0.03, #all-cause mortality rate
+                omega = 0, # waning immunity
+                t_lat = 3 # latent period from E
+                
+)
+
+state <- c(S = 99999, #population of 100,000, 1 person starts of infected
+           E = 0, 
+           I = 1, 
+           R = 0
+)
+```
+
+We set the total time steps and run the SEIR model. 
+```{r}
+T_end <- 500 #run model for 500 time steps (e.g. months)
+times <- seq(0, T_end, by = 1) #runs the model for 500 time steps (e.g. months), and computes output at each time step 
+
+#Run the base-case
+out_seir_demo <- data.frame(ode(y = state, times = times, func = OpenSEIR, parms = parameters))
+```
+
+Plot the number of I compartment over time.
+```{r, echo=FALSE}
+#Plot the result of base-case
+ggplot(data=as.data.frame(out_seir_demo))+
+  geom_point(aes(time,I))
+```
+
+Let's look at how the number of infections change with varying duration of latency.
+```{r}
+#One-way sensitivity analysis on the latent period (SEIR_demo)
+tlat_list <- c(0.01,seq(1,5,by=1)) # a vector of latent period
+output_dt <- data.frame() # an empty dataset to save outcomes
+
+for (this_tlat in tlat_list){
+  # Replace latent period with the next value in the last
+  parameters['t_lat'] = this_tlat 
+  # Run ode solver
+  this_output <- data.frame(ode(y = state, times=times, func=OpenSEIR, parms = parameters))
+  # Record current value of t_lat
+  this_output$t_lat = as.character(this_tlat)
+  # Stack the result 
+  output_dt <- rbind(output_dt, this_output)
+  
+}
+```
+
+Plot the number of infection (size of I compartment) with varying latent period. Here, we plotted only I to assess the size of population who are infectious but if you are interested in 'true' number of infections, you can compute sum of I and E compartments. With longer disease latency, how does the epidemic curve change?
+
+```{r, echo=FALSE}
+ggplot(output_dt)+
+  geom_line(aes(x=time, y=I, color=t_lat, group=t_lat))+
+  ylab("Infected")+
+  xlab("Time")+
+  theme_bw()
+```
+We can further look into the relationship between the timing of epidemic peak and latent period
+```{r}
+# Continuous sensitivity analysis showing the change in the epidemic peak
+# A function to find the epidemic peak given a time frame
+find_peak <- function(output){
+  infected <- output$I # output$E + output$I if you want to include exposed compartment
+  peak <- which.max(infected)
+  return(peak)
+}
+
+tlat_list <- seq(0.03,10,by=0.1) # a vector of t_lat
+output_dt <- data.frame() # An empty dataset to save ode outcomes
+for (this_tlat in tlat_list){
+  # Replace t_lat with the next value
+  parameters['t_lat'] = this_tlat 
+  # Run ode solver
+  this_output <- data.frame(ode(y = state, times=times, func=OpenSEIR, parms = parameters))
+  # Find the epidemic peak
+  this_peak <- find_peak(this_output)
+  # Create a dataset with peak and t_lat in this cycle
+  this_output <- data.frame(peak=this_peak, tlat=this_tlat)
+  # Stack the dataset 
+  output_dt <- rbind(output_dt, this_output)
+  
+}
+```
+
+Plot the result on the relationship between epidemic peak and latent period. 
+```{r, echo=FALSE}
+ggplot(output_dt)+
+  geom_point(aes(x=tlat, y=peak))+
+  ylab("Epi peak")+
+  xlab("Latent period")+
+  theme_bw()
+```
+
+## Additional code for SEIR model without demography
+```{r}
+# SEIR model without births and deaths
+SEIR_nodemo<-function(t, state, parameters) {
+  with(as.list(c(state, parameters)),{
+    N = S + E + I + R
+    sigma = 1/t_lat # 1/latent period
+    
+    #SIR w/ demography equations from lecture
+    dS <- -beta*S*I/N + omega*R
+    dE <- beta*S*I/N - sigma*E
+    dI <- sigma*E - gamma*I
+    dR <- gamma*I - omega*R
+    
+    # return the rates of change as a list
+    list(c(dS, dE, dI, dR))
+  })
+}
+```
+
