@@ -49,3 +49,27 @@ output_t <- melt(as.data.frame(output),id.vars='time')
 ggplot(output_t)+
   geom_point(aes(time,value,color=variable))+
   theme_bw()
+
+# Sensitivity analysis on contact tracing rate
+c_list <- c(0,0.05,0.1) # a vector of contact tracing rate
+output_dt <- data.frame() # empty data to save outcomes
+
+for (this_c in c_list){
+  temp <- paramters
+  # Replace latent period with the next value in the last
+  temp['c'] <- this_c
+  # Run ode solver
+  this_output <- data.frame(ode(y = state, times = times, func = SI_CC, parms = parameters))
+  # Record current value of t_lat
+  this_output$c = as.character(c)
+  # Stack the result 
+  output_dt <- rbind(output_dt, this_output)
+  
+}
+
+# Plot the results with varying latent period
+ggplot(output_dt)+
+  geom_line(aes(x=time, y=I, color=c, group=c))+
+  ylab("Infected")+
+  xlab("Time")+
+  theme_bw()
