@@ -1,22 +1,28 @@
-###############################################################################################
+---
+title: "SIR with heterogeneous mixing"
+author: "Tess Ryckman"
+date: "2023-10-17"
+output: html_document
+---
 
-#Core/Basic SIR model code
-
-###############################################################################################
-
-#1. Load packages
+1. Load packages
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
 library(deSolve) 
 library(tidyverse) 
 library(cowplot)
+```
 
-#2. Define parameters and starting compartment sizes
-parameters <- list(contact_matrix=matrix(data=c(29, 1, 1, 5)*0.1, 
+2. Define parameters, starting compartment sizes, and timesteps
+In SIR_basic, we had a beta (effective contact rate) of 0.5
+Let's say this represented 5 contacts with a 10% probability of infection per infected contact
+Now we have a contact matrix instead - still with a 10% probability of infection per contact, but with heterogeneous contact structure. WAIFW: effective contact rate to h from h, to l from h, to h from l, to l from l (in that order).
+```{r}
+parameters <- list(contact_matrix=matrix(data=c(29, 1, 5, 5)*0.1, 
                                          nrow=2, ncol=2, byrow=T), 
-                   # before: 5 contacts with 10% probability of infection per infected contact
-                   # now: still 10% probability of infection per infected contact, but # contacts varies by risk group (still avg of 5 contacts per person)
-                   # WAIFW: effective contact rate to h from h, to l from h, to h from l, to l from l
                    gamma = 0.3 #recovery rate (1/duration infection)
 )
+
 
 state <- c(S_High = 24999, #high (h) and low (l) risk groups
            S_Low = 75000,
@@ -29,8 +35,12 @@ state <- c(S_High = 24999, #high (h) and low (l) risk groups
 T_end <- 500 #run model for 500 time steps (e.g. months)
 times <- seq(0, T_end, by = 1) #runs the model for 500 time steps (e.g. months), and computes output at each time step 
 
-#3. Define function for a basic SIR model with 2 groups and no demography
+```
 
+
+3. Define function for a basic SIR model with 2 groups and no demography
+We structure "state" as a matrix within the function and use matrix multiplication to increase efficiency
+```{r}
 MixingSIR<-function(t, state, parameters) {
 
     state <- matrix(data=state, nrow=ncol(parameters$contact_matrix))
@@ -47,8 +57,12 @@ MixingSIR<-function(t, state, parameters) {
       list(c(dS, dI, dR)) 
     })
 }
+```
 
-#4. Run the model using the ode() function that is part of the deSolve package.
+
+4. Run the model and view model output
+We define a new plotting function that allows for easy visualization of the 2 risk groups
+```{r}
 output <- ode(y = state, times = times, func = MixingSIR, parms = parameters)
 output <- as.data.frame(output) 
 
@@ -64,10 +78,12 @@ plot_trace_risk <-function(out) {
 }
 
 plot_trace_risk(output_long %>% filter(time<100))
+```
 
-#5. Compare to a version without risk stratification
+5. Compare output to a situation with no risk stratification (using BasicSIR)
+```{r}
 
-#rerun model from SIR_basic (at the beginning of the code demos)
+#this is just the same as in SIR_basic
 parameters_basic <- c(beta = 0.5, #effective contact rate (aka transmission rate)
                       gamma = 0.3 #recovery rate (1/duration of infection)
 )
@@ -105,25 +121,32 @@ output_basic <- as.data.frame(output_basic) %>% mutate(N=S+I+R)
 output_long_basic <- pivot_longer(output_basic, cols=c("S","I","R"), names_to="state", values_to="size")
 fig1 <- plot_trace(output_long_basic %>% filter(time<100))
 
-#sum across risk groups
+#sum across risk groups to produce an equivalent trace plot
 output_long_sum <- output_long %>% group_by(time, state) %>% 
   summarise(size=sum(size), N=sum(N))
 fig2 <- plot_trace(output_long_sum %>% filter(time<100))
 
+#compare trace plots
 plot_grid(fig1 + ggtitle("Homogeneous Mixing"), 
           fig2 + ggtitle("Heterogeneous Mixing"),
           align="hv")
+```
 
-#6. Compare R0 
+6. Probably skip for time/wasn't covered in slides, but we can also compare R0.
+R0 is greater in the stratified version (explains earlier epidemic peak)
+But Rt (harder to calculate) declines faster in the stratified version - exhaustion of susceptibles in the high-risk group
+```{r}
 R_matrix <- parameters$contact_matrix*(rowSums(matrix(data=state, nrow=ncol(parameters$contact_matrix)))/sum(state))/
   (parameters$gamma)
 R0 <- max(eigen(R_matrix)$values) #this is the R0 of the stratified version
 
 R0_basic <- parameters_basic[["beta"]]/parameters_basic[["gamma"]]
-print(paste0("R0 basic: ", round(R0_basic, 2), "; RO stratified: ", round(R0, 2)))
+print(paste0("R0 basic: ", round(R0_basic, 2), "; R0 stratified: ", round(R0, 2)))
+```
 
 
-#7. Changing mixing patterns - but keeping total # contacts the same
+7. Changing mixing patterns - but keeping total # contacts the same
+```{r}
 contact_matrices <- list(matrix(data=c(35, 0, 0, 5)*0.1,
                              nrow=2, ncol=2, byrow=T),
                       matrix(data=c(29, 1, 1, 5)*0.1, 
@@ -156,8 +179,12 @@ plot_trace_risk(output_all %>% filter(time<=100)) + facet_wrap(~contact_pattern)
 output_all_sum <- output_all %>% group_by(time, state, contact_pattern) %>% 
   summarise(size=sum(size), N=sum(N))
 plot_trace(output_all_sum %>% filter(time<100)) + facet_wrap(~contact_pattern)
+```
 
-#8. Confirm that homogeneous mixing version is same as basic model without risk stratification
+
+8. We can also confirm that the homogeneous mixing version is the same as the BasicSIR model
+```{r}
 plot_trace(output_all_sum %>% filter(time<200 & contact_pattern=="Homogeneous mixing"))
 plot_trace(output_long_basic %>% filter(time<200))
+```
 
