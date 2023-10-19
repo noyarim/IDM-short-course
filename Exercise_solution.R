@@ -6,6 +6,7 @@
 library(deSolve)
 library(ggplot2)
 library(reshape2)
+library(ggpubr)
 
 ## SEIRS model (a model with latent state and waning immunity) ##
 
@@ -110,7 +111,7 @@ OpenSEIRS_qrtn<-function(t, state, parameters) {
 }
 
 #2. Define parameters and starting compartment sizes
-parameters <- c(beta = 0.2, #effective contact rate (aka transmission rate)
+parameters <- c(beta = 0.8, #effective contact rate (aka transmission rate)
                 gamma = 1/14, #recovery rate (1/duration infection)
                 birth = 12/1000/365,#0.0000027, birth rate (per capita)
                 death = 12/1000/365, #all-cause mortality rate
@@ -195,11 +196,29 @@ param.q1 <- parameters
 param.q1['t_start_q']<-10
 param.q1['q'] <- 0.1
 out.q1 <- as.data.frame(ode(y = state, times=times, func=OpenSEIRS_qrtn, parms = param.q1))
+# 2. late implementation of quarantine at high rate
+param.q2 <- parameters
+param.q2['t_start_q']<-90
+param.q2['q'] <- 0.7
+out.q2 <- as.data.frame(ode(y = state, times=times, func=OpenSEIRS_qrtn, parms = param.q2))
+# Compare the two scenarios
+out.q1.t <- melt(out.q1, id.vars='time')
+out.q2.t <- melt(out.q2, id.vars='time')
+plt_q1 <- ggplot(out.q1.t)+
+  geom_line(aes(time,value,color=variable))+
+  ggtitle("Early/Low")+
+  theme_bw()
+plt_q2 <- ggplot(out.q2.t)+
+  geom_line(aes(time,value,color=variable))+
+  ggtitle("Late/high")+
+  theme_bw()
+ggarrange(plt_q1,plt_q2,common.legend = TRUE)
+# Compare only I
+ggplot()+
+  geom_point(out.q1, aes(time,I))+
+  geom_point(out.q2, aes(time,I))
 
-param.q1 <- parameters
-param.q1['t_start_q']<-10
-param.q1['q'] <- 0.1
-out.q1 <- as.data.frame(ode(y = state, times=times, func=OpenSEIRS_qrtn, parms = param.q1))
+I.q12 <- data.frame(time=out.q2$time, q1=out.q1$I
 
 
 
