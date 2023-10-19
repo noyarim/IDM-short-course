@@ -95,3 +95,17 @@ for(rates in c(0, 0.01, 0.03, 0.1)) {
 output_all <- bind_rows(output_all)
 
 plot_trace(output_all) + facet_wrap(~demo_lab+R0_lab+I_star_lab)
+
+
+
+#7. How would you modify the code or parameters to simulate a chronic disease (with demography?)
+parameters <- list(beta = 0.5, #effective contact rate
+                   gamma = 0, #recovery rate (1/duration infection)
+                   birth = 0.02, #birth rate (per capita)
+                   death = 0.02 #all-cause mortality rate
+)
+
+output <- ode(y = state, times = times, func = OpenSIR, parms = parameters)
+output <- as.data.frame(output) %>% mutate(N=S+I+R)
+output_long <- pivot_longer(output, cols=c("S","I","R"), names_to="state", values_to="size")
+plot_trace(output_long)
