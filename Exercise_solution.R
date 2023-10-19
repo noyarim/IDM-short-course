@@ -102,7 +102,7 @@ OpenSEIRS_qrtn<-function(t, state, parameters) {
     dE <- beta*S*I/N - sigma*E - death*E
     dI <- sigma*E - death*I - gamma*I - q_t*I
     dQ <- q_t*I - death*Q - gamma*Q
-    dR <- gamma*I - gamma*Q + death*R - omega*R
+    dR <- gamma*I + gamma*Q - death*R - omega*R
     
     # return the rates of change as a list
     list(c(dS, dE, dI, dQ, dR))
@@ -112,11 +112,11 @@ OpenSEIRS_qrtn<-function(t, state, parameters) {
 #2. Define parameters and starting compartment sizes
 parameters <- c(beta = 0.2, #effective contact rate (aka transmission rate)
                 gamma = 1/14, #recovery rate (1/duration infection)
-                birth = 12/1000/365,#0.0000027, #birth rate (per capita)
+                birth = 12/1000/365,#0.0000027, birth rate (per capita)
                 death = 12/1000/365, #all-cause mortality rate
                 omega = 1/(30.5*3),#0.01, # waning immunity
                 t_lat = 5, # latent period from E to I
-                q = 0.05, # quarantine rate after implementing quarantine
+                q = 0.1, # quarantine rate after implementing quarantine
                 t_start_q = 50 # time to implement quarantine
                 
 )
@@ -188,3 +188,20 @@ ggplot(twsa_dt_t)+
   geom_line(aes(time,value,color=variable))+
   facet_grid(beta~t_start_q)+
   theme_bw()
+
+# low & early quarantine vs. high & late quarantine
+# 1. early implementation of quarantine at low rate
+param.q1 <- parameters
+param.q1['t_start_q']<-10
+param.q1['q'] <- 0.1
+out.q1 <- as.data.frame(ode(y = state, times=times, func=OpenSEIRS_qrtn, parms = param.q1))
+
+param.q1 <- parameters
+param.q1['t_start_q']<-10
+param.q1['q'] <- 0.1
+out.q1 <- as.data.frame(ode(y = state, times=times, func=OpenSEIRS_qrtn, parms = param.q1))
+
+
+
+
+
