@@ -40,7 +40,7 @@ print(state)
 3. Define function for a basic SIR model without demography.
 This will be used with the deSolve package to simulate how your population moves between compartments over time.
 ```{r}
-BasicSIR<-function(t, state, parameters) {
+BasicSIR <- function(t, state, parameters) {
   with(as.list(c(state, parameters)),{ 
     N = S + I + R #define N (total population size)
     
@@ -75,6 +75,7 @@ Plotting will be easiest to do if we put our data into "long format" using the p
 ```{r}
 output <- as.data.frame(output) %>% mutate(N=S+I+R)
 output_long <- pivot_longer(output, cols=c("S","I","R"), names_to="state", values_to="size")
+head(output_long)
 
 plot_trace <-function(out) {
   fig <- ggplot(out, aes(x=time, y=size/N, color=state)) + 
