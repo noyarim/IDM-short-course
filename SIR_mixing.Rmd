@@ -18,7 +18,7 @@ In SIR_basic, we had a beta (effective contact rate) of 0.5
 Let's say this represented 5 contacts with a 10% probability of infection per infected contact
 Now we have a contact matrix instead - still with a 10% probability of infection per contact, but with heterogeneous contact structure. WAIFW: effective contact rate to h from h, to l from h, to h from l, to l from l (in that order).
 ```{r}
-parameters <- list(contact_matrix=matrix(data=c(29, 1, 5, 5)*0.1, 
+parameters <- list(contact_matrix=matrix(data=c(29, 1, 1, 5)*0.1, 
                                          nrow=2, ncol=2, byrow=T), 
                    gamma = 0.3 #recovery rate (1/duration infection)
 )
@@ -35,6 +35,9 @@ state <- c(S_High = 24999, #high (h) and low (l) risk groups
 T_end <- 500 #run model for 500 time steps (e.g. months)
 times <- seq(0, T_end, by = 1) #runs the model for 500 time steps (e.g. months), and computes output at each time step 
 
+
+print(parameters)
+print(state)
 ```
 
 
@@ -57,6 +60,16 @@ MixingSIR<-function(t, state, parameters) {
       list(c(dS, dI, dR)) 
     })
 }
+
+#demonstrate matrix multiplication here
+state_mat <- matrix(data=state, nrow=ncol(parameters$contact_matrix))
+colnames(state_mat) <- c("S", "I", "R")
+rownames(state_mat) <- c("h", "l")
+
+print(state_mat)
+
+#rates at which high- and low-risk susceptibles acquire infection
+state_mat[,"I"]%*%parameters$contact_matrix/sum(state_mat)
 ```
 
 
@@ -72,7 +85,7 @@ output_long <- output_long %>% group_by(time, risk) %>% mutate(N=sum(size))
 plot_trace_risk <-function(out) {
   fig <- ggplot(out, aes(x=time, y=size/N, color=state, linetype=risk)) + 
     geom_line(linewidth=1.25) +
-    labs(x='Time', y='Compartment size', color='', linetype='Risk') +
+    labs(x='Time', y='Compartment proportions', color='', linetype='Risk') +
     theme_bw() + theme(panel.grid=element_blank())
   return(fig)
 }

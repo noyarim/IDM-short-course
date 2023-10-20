@@ -95,7 +95,8 @@ print(R0)
 
 #effective reproductive number Rt declines over time as % population susceptible declines
 output <- output %>% mutate(Rt=R0*S/N)
-head(output$Rt, 10)
+head(output$Rt, 5)
+tail(output$Rt, 5)
 
 ```
 7. Let's further examine how infection dynamics and Rt are related

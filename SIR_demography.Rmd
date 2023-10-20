@@ -16,7 +16,7 @@ library(tidyverse)
 plot_trace <-function(out) {
   fig <- ggplot(out, aes(x=time, y=size/N, color=state)) + 
     geom_line(linewidth=1.25) +
-    labs(x='Time', y='Compartment size', color='') +
+    labs(x='Time', y='Compartment proportions', color='') +
     theme_bw() + theme(panel.grid=element_blank())
   return(fig)
 }
@@ -65,6 +65,7 @@ output <- ode(y = state, times = times, func = OpenSIR, parms = parameters)
 output <- as.data.frame(output) %>% mutate(N=S+I+R)
 output_long <- pivot_longer(output, cols=c("S","I","R"), names_to="state", values_to="size")
 plot_trace(output_long)
+output[501, c("S", "I", "R")]/100000
 ```
 
 4. We didn't go over this in the slides, but in this model there are equations for the steady state distribution
