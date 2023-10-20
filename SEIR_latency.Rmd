@@ -68,7 +68,9 @@ Plot the number of I compartment over time.
 ```{r, echo=FALSE}
 #Plot the result of base-case
 ggplot(data=as.data.frame(out_seir_demo))+
-  geom_point(aes(time,I))
+  geom_point(aes(time,I))+
+  ylab("Infected")+
+  theme_bw()
 ```
 
 Let's look at how the number of infections change with varying duration of latency.
