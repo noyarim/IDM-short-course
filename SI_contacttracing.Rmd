@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(deSolve)
 library(ggplot2)
 library(reshape2)
-library(tidyverse)
+library(dplyr)
 ```
 
 ## Adds vaccination to the basic SIR model
@@ -57,12 +57,15 @@ T_end <- 500 #run model for 500 time steps (e.g. months)
 times <- seq(0, T_end, by = 1) #runs the model for 500 time steps (e.g. months), and computes output at each time step 
 
 #Run the base-case
-output.ct <- ode(y = state, times = times, func = SI_CC, parms = parameters)
+output.ct <- as.data.frame(ode(y = state, times = times, func = SI_CC, parms = parameters))
 ```
 
 Plot S. I, R compartment over time
 ```{r, echo=FALSE}
-plot(output.ct)
+output.ct.t <- melt(output.ct %>% select(-C), id.vars="time")
+ggplot(output.ct.t) +
+  geom_line(aes(time,value,color=variable))+
+  theme_bw()
 ```
 
 Run sensitivity analysis on contact tracing rate and discuss how it affects the dynamics.
