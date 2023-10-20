@@ -58,7 +58,10 @@ output <- ode(y = state, times = times, func = OpenSIRS, parms = parameters)
 
 Plot the number of individuals in S, I, R compartment over time.
 ```{r plot, echo=FALSE}
-plot(output)
+output_t <- melt(as.data.frame(output), id.vars='time')
+ggplot(output_t)+
+  geom_line(aes(time,value,color=variable))+
+  theme_bw()
 ```
 
 Let's look at how the dynamic changes as we vary rate of waning immunity
