@@ -7,6 +7,7 @@ library(deSolve)
 library(ggplot2)
 library(reshape2)
 library(ggpubr)
+library(dplyr)
 
 ## Answers to the question 1 and 2 ##
 ## SEIRS model (a model with latent state and waning immunity) ##
@@ -23,8 +24,10 @@ OpenSEIRS<-function(t, state, parameters) {
     dI <- sigma*E - death*I - gamma*I
     dR <- gamma*I - death*R - omega*R
     
+    dC <- beta*S*I/N
+    
     # return the rates of change as a list
-    list(c(dS, dE, dI, dR))
+    list(c(dS, dE, dI, dR, dC))
   })
 }
 
@@ -44,7 +47,8 @@ beta_high <- 10*(parameters[["death"]] + parameters[["gamma"]])*(parameters[["de
 state <- c(S = 10000-1, #population of 10,000, 1 person starts of infected
            E = 0, 
            I = 1, 
-           R = 0
+           R = 0,
+           C = 0 #track cumulative number of infections
 )
 
 
@@ -66,12 +70,14 @@ ggplot(out_lowbeta_t)+
   geom_line(aes(time,value,color=variable))+
   ggtitle("R0 = 3")+
   theme_bw()
+max(out_lowbeta$C) #cumulative infections
 
 out_highbeta_t <- melt(out_highbeta, id.vars='time')
 ggplot(out_highbeta_t)+
   geom_line(aes(time,value,color=variable))+
   ggtitle("R0 = 10")+
   theme_bw()
+max(out_highbeta$C) #cumulative infections
 
 # Plot E + I over time & peak of epidemics
 totI <- data.frame(time = out_lowbeta$time, lowbeta = out_lowbeta$totI, highbeta = out_highbeta$totI)
@@ -217,10 +223,21 @@ ggplot(twsa_dt)+
   xlab("Time")+
   theme_bw()
 
-ggplot(twsa_dt)+
+ggplot(twsa_dt %>% filter(q_covg!="q_covg=0"))+
   geom_line(aes(x=time, y=C))+
   facet_grid(beta~t_start_q+q_covg)+
   ylab("Cumulative Infections")+
   xlab("Time")+
+  theme_bw()
+
+twsa_dt <- twsa_dt %>% 
+  mutate(q_lab=if_else(q_covg=="q_covg=0", "None",
+                     if_else(q_covg=="q_covg=0.5", "Early/Low",
+                             "Late/High")))
+ggplot(twsa_dt %>% filter(q_covg!="q_covg=0" & beta=="beta=0.71"))+
+  geom_line(aes(x=time, y=C, color=q_lab))+
+  ylab("Cumulative Infections")+
+  xlab("Time")+
+  labs(color="Quarantine Policy") + 
   theme_bw()
 
