@@ -92,9 +92,9 @@ ggplot(I_dt)+
 ```
 
 
-However, vaccination usually doesn't provide perfect protection from infection. So let's see how we can model imperfect protection with vaccination. Another consideration to add is whether or not those who are infected after vaccination are less infectious than those who are infected without vaccination. So here we start with the model that assumes imperfect protection with vaccination and no change in infectiousness.
+However, vaccination usually doesn't provide perfect protection from infection. So let's see how we can model imperfect protection with vaccination. Another consideration to add is whether or not those who are infected after vaccination are less infectious than those who are infected without vaccination. So here we start with the model that assumes imperfect protection and no change in infectiousness with vaccination.
 
-Below, we defined the ode function with S,I,R compartment, with stratification by vaccine status. Non-vaccinated compartment moves to vaccinated corresonding compartment at the rate of mu. In beta*S*I term, note that total I that can infect others is the sum of I_NotV and I_V. (1-alpha) indicates reduced susceptibility for vaccinated susceptibles and the higher alpha is, the lower the susceptibility would be.
+Below, we defined the ode function with S,I,R compartment, with stratification by vaccine status. Non-vaccinated compartment moves to the vaccinated corresponding compartment at the rate of mu. In beta*S*I term, note that total I who can infect others is the sum of I_NotV and I_V. (1-alpha) indicates reduced susceptibility for vaccinated susceptibles and the higher alpha is, the lower the susceptibility would be.
 ```{r}
 ## B. Vaccination provides imperfect protection from infection ##
 # B-1. No change in infectiousness
@@ -129,7 +129,6 @@ OpenSIR_Vax_ip2<-function(t, state, parameters) {
   with(as.list(c(state, parameters)),{
     N = S_NotV + S_V + I_NotV + I_V + R_NotV + R_V
     beta.2 = mbeta*beta.1 # transmission rate given vaccination
-    print(c(beta.1,beta.2))
     #compartments without vaccination
     dS_NotV <- -beta.1*S_NotV*I_NotV/N - beta.2*S_NotV*I_V/N + birth*N - death*S_NotV - mu*S_NotV
     dI_NotV <- beta.1*S_NotV*I_NotV/N + beta.2*S_NotV*I_V/N - death*I_NotV - gamma*I_NotV
@@ -175,7 +174,7 @@ state.ip <- c(S_NotV = 99999,
               C = 0)
 ```
 
-We set the total time steps and run the SIR modelwith imperfect protection from vaccination. Because each compartment is stratified, we computed the total S, I, R compartment
+We set the total time steps and run the SIR model with imperfect protection from vaccination. Because each compartment is stratified, we computed the total S, I, R compartment
 ```{r}
 T_end <- 500 #run model for 500 time steps (e.g. months)
 times <- seq(0, T_end, by = 1) #runs the model for 500 time steps (e.g. months), and computes output at each time step 
@@ -202,13 +201,17 @@ g1<- ggplot(output.vax.ip1)+
         geom_line(aes(time,I,color="I"))+
         geom_line(aes(time,R,color="R"))+
         scale_color_manual(values=c("tomato","blue","green"))+
+        ggtitle("No Change in Infectiousness")+
+        ylab("Number of individuals")+
         theme_bw()
 g2<- ggplot(output.vax.ip2)+
         geom_line(aes(time,S,color="S"))+
         geom_line(aes(time,I,color="I"))+
         geom_line(aes(time,R,color="R"))+
         scale_color_manual(values=c("tomato","blue","green"))+
-        theme_bw()
+        ggtitle("Reduced infectiousness with vaccination")+
+        ylab("Number of individuals")+
+       theme_bw()
 # side-by-side plot
 ggarrange(g1,g2,common.legend = TRUE)
 ```
@@ -245,22 +248,28 @@ mu_out_all_t <- melt(mu_out_all %>% select(time,S,I,R,N,mu), id.vars=c("time","m
 # Plot S, I, R
 ggplot(mu_out_all_t) +
   geom_line(aes(x=time,y=value/N*100,color=variable))+
+  ylab("Percentage of population")+
   facet_wrap(.~mu)+
   theme_bw()
-# Plot S, I, R stratified by vaccination status
+# Plot I stratified by vaccination status
 ggplot(mu_out_all)+
-  geom_point(aes(x=time,y=I_NotV),color='green')+
-  geom_point(aes(x=time,y=I_V),color='tomato')+
-  facet_wrap(.~mu)
+  geom_point(aes(x=time,y=I_NotV,color='Not vaccinated'))+
+  geom_point(aes(x=time,y=I_V,color='Vaccinated'))+
+  ylab("Infections")+
+  facet_wrap(.~mu)+
+  scale_color_manual(values=c("green","tomato"))+
+  theme_bw()
 # Plot prevalence of I (I/N)
 ggplot(mu_out_all) + 
   geom_point(aes(x=time,y=I/N))+
   facet_wrap(.~mu)+
+  ylab("Proportion of population who are infected")+
   theme_bw()
 # Cumulative number of infections
 ggplot(mu_out_all) + 
   geom_point(aes(x=time,y=C))+
   facet_wrap(.~mu)+
+  ylab("Cumulative infections")+
   theme_bw()
 ```
 
@@ -293,27 +302,34 @@ alpha_out_all_t <- melt(alpha_out_all%>% select(time,S,I,R,N,alpha), id.vars=c("
 # Plot S, I, R
 ggplot(alpha_out_all_t) +
   geom_line(aes(x=time,y=value/N*100,color=variable))+
+  ylab("Percentage of population")+
   facet_wrap(.~alpha)+
   theme_bw()
 # Plot S, I, R stratified by vaccination status
 ggplot(alpha_out_all)+
-  geom_point(aes(x=time,y=I_NotV),color='green')+
-  geom_point(aes(x=time,y=I_V),color='tomato')+
-  facet_wrap(.~alpha)
+  geom_point(aes(x=time,y=I_NotV,color='Not vaccinated'))+
+  geom_point(aes(x=time,y=I_V,color='Vaccinated'))+
+  ylab("Infections")+
+  facet_wrap(.~alpha)+
+  scale_color_manual(values=c("green","tomato"))+
+  theme_bw()
 # Plot prevalence of I
 ggplot(alpha_out_all) + 
   geom_point(aes(x=time,y=I/N))+
   facet_wrap(.~alpha)+
+  ylab("Prevalence of infection")+
   theme_bw()
 # Plot cumulative number of infections
 ggplot(alpha_out_all) + 
   geom_point(aes(x=time,y=C))+
   facet_wrap(.~alpha)+
+  ylab("Cumulative infections")+
   theme_bw()
 # Breakthrough infection
 ggplot(alpha_out_all)+
   geom_point(aes(x=time,y=I_V))+
   facet_wrap(.~alpha)+
+  ylab("Number of breakthrough infections")+
   theme_bw()
 ```
 
@@ -347,11 +363,13 @@ mbeta_out_all_t <- melt(mbeta_out_all%>% select(time,S,I,R,N,mbeta), id.vars=c("
 ggplot(mbeta_out_all_t) +
   geom_line(aes(x=time,y=value/N*100,color=variable))+
   facet_wrap(.~mbeta)+
+  ylab("Proportion of population")+
   theme_bw()
 # plot cumulative number of infections
 ggplot(mbeta_out_all) + 
   geom_point(aes(x=time,y=C))+
   facet_wrap(.~mbeta)+
+  ylab("Cumulative infections")+
   theme_bw()
 ```
 
@@ -400,7 +418,7 @@ state.q <- c(S = 99999, #population of 100,000, 1 person starts of infected
              C = 0)
 ```
 
-We set the total time steps and run the SIR modelwith imperfect protection from vaccination. Because each compartment is stratified, we computed the total S, I, R compartment
+We set the total time steps and run the SIR model with quarantine
 ```{r}
 T_end <- 500 #run model for 500 time steps (e.g. months)
 times <- seq(0, T_end, by = 1) #runs the model for 500 time steps (e.g. months), and computes output at each time step 
@@ -411,7 +429,11 @@ output.qrtn <- ode(y = state.q, times = times, func = OpenSIR_Qrtn, parms = para
 Plot S,I,R,Q compartment
 ```{r, echo=FALSE}
 # Plot base-case result
-plot(output.qrtn)  
+output.qrtn.t <- melt(as.data.frame(output.qrtn) %>% select(-C), id.vars="time")
+ggplot(output.qrtn.t)+
+  geom_line(aes(time,value,color=variable))+
+  ylab("Number of individuals")+
+  theme_bw()
 ```
 
 Let's run a sensitivity analysis on quarnatine rate to see how it affects the projected epidemic.
@@ -441,12 +463,14 @@ q_out_all_t <- melt(q_out_all%>% select(time,S,I,R,N,q), id.vars=c("time","q","N
 # Plot S, I, R
 ggplot(q_out_all_t) +
   geom_line(aes(x=time,y=value/N*100,color=variable))+
+  ylab("Proportion of population")+
   facet_wrap(.~q)+
   theme_bw()
 # Plot cumulative number of infections
 ggplot(q_out_all) + 
   geom_point(aes(x=time,y=C))+
   facet_wrap(.~q)+
+  ylab("Cumulative infections")+
   theme_bw()
 ```
 
