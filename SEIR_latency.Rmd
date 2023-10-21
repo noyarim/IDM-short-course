@@ -15,7 +15,7 @@ library(reshape2)
 ## Adds latent state to the basic SIR model
 This code is to illustrate how to model disease latency in SIR model.
 
-First, we defined the ode function with S,E,I,R compartment. E compartment indicates those who were exposed to the infectious agent but have not developed infectivity. In the differential equation, rate of progressing from E to I is internally calculated based on the latent period (sigma = 1/t_lat). Note that E does not infect others (i.e. number of new infections is still beta*S*I/N but not beta*S*(E+I)/N).
+First, we defined the ode function with S,E,I,R compartment. E compartment indicates those who were exposed to the infectious agent but have not developed infectiousness In the differential equation, rate of progressing from E to I is internally calculated based on the latent period (sigma = 1/t_lat). Note that E does not infect others (i.e. number of new infections is still beta*S*I/N but not beta*S*(E+I)/N).
 
 ```{r}
 #1. Define model function

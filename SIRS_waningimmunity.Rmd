@@ -9,6 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(deSolve)
 library(ggplot2)
+library(reshape2)
 ```
 
 ## Adds waning immunity to the basic SIR model

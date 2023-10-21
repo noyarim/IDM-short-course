@@ -71,7 +71,7 @@ ggplot(output.ct.t) +
 Run sensitivity analysis on contact tracing rate and discuss how it affects the dynamics.
 ```{r}
 # Sensitivity analysis on contact tracing rate
-c_list <- c(0,0.05,0.1) # a vector of contact tracing rate
+c_list <- c(0,0.3,0.5) # a vector of contact tracing rate
 output_dt <- data.frame() # empty data to save outcomes
 
 for (this_c in c_list){
