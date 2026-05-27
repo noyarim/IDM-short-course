@@ -1,0 +1,90 @@
+###############################################################################################
+
+#SIR model with quarantine (closed population, no demography)
+
+###############################################################################################
+library(deSolve)
+library(ggplot2)
+library(reshape2)
+library(dplyr)
+
+## SIR model with quarantine ##
+# Q compartment indicates individuals who are infected and isolated under quarantine.
+
+#1. Define model function
+SIR_Qrtn<-function(t, state, params) {
+  with(as.list(c(state, params)),{
+    N = S + I + Q + R
+
+    #SIR with quarantine
+    dS<- -beta*S*I/N
+    dI <- beta*S*I/N - q*I - gamma*I
+    dQ <- q*I - gamma*Q
+    dR <- gamma*I + gamma*Q
+    dC <- beta*S*I/N
+
+    # return the rates of change as a list
+    list(c(dS, dI, dQ, dR, dC))
+  })
+}
+
+#2. Define parameters and starting compartment sizes
+# q is quarantine rate (I->Q)
+params <- c(beta = 0.5, #effective contact rate (aka transmission rate)
+                gamma = 0.3, #recovery rate (1/duration infection)
+                q = 0.02 # quarantine rate
+)
+# Initial state
+state.q <- c(S = 99999, #population of 100,000, 1 person starts of infected
+             I = 1,
+             Q = 0,
+             R = 0,
+             C = 0)
+
+#3. Run the SIR model with quarantine
+T_end <- 500 #run model for 500 time steps (e.g. months)
+times <- seq(0, T_end, by = 1) #runs the model for 500 time steps (e.g. months), and computes output at each time step
+# Run ODE solver
+output.qrtn <- ode(y = state.q, times = times, func = SIR_Qrtn, parms = params)
+
+# Plot base-case result (S, I, R, Q compartments)
+output.qrtn.t <- melt(as.data.frame(output.qrtn) %>% select(-C), id.vars="time")
+ggplot(output.qrtn.t)+
+  geom_line(aes(time,value,color=variable))+
+  ylab("Number of individuals")+
+  theme_bw()
+
+#4. Sensitivity analysis on quarantine rate - how does it affect the projected epidemic?
+q_list <- c(0,0.05,0.1) # a vector of quarantine rate
+q_out_all <- data.frame() # an empty dataset to save the outcome
+
+for(this_q in q_list){
+  temp_param <- params #copy parameter
+  temp_param[['q']] <- this_q # replace q
+  # run ode solver
+  this_out <- data.frame(ode(y = state.q, times = times, func = SIR_Qrtn, parms = temp_param))
+  # save q value in this cycle
+  this_out <- this_out %>%
+    mutate(N = S+I+R+Q,
+           q = this_q)
+  # stack the result
+  if(this_q == q_list[1]){
+    q_out_all <- this_out
+  }else{
+    q_out_all <- rbind(q_out_all, this_out)
+  }
+}
+# change the dataset to a long-form dataset
+q_out_all_t <- melt(q_out_all%>% select(time,S,I,R,N,q), id.vars=c("time","q","N"))
+# Plot S, I, R
+ggplot(q_out_all_t) +
+  geom_line(aes(x=time,y=value/N*100,color=variable))+
+  ylab("Proportion of population")+
+  facet_wrap(.~q)+
+  theme_bw()
+# Plot cumulative number of infections
+ggplot(q_out_all) +
+  geom_point(aes(x=time,y=C))+
+  facet_wrap(.~q)+
+  ylab("Cumulative infections")+
+  theme_bw()
